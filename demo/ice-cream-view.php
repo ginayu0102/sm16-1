@@ -13,17 +13,43 @@
  */
 
 # '../' works for a sub-folder.  use './' for the root  
-require '../inc_0700/config_inc.php'; #provides configuration, pathing, error handling, db credentials 
+require '../inc_0700/config_inc.php'; #provides configuration, pathing, error handling, db credentials
  
-# SQL statement
-$sql = "select MuffinName, MuffinID, Price from test_Muffins";
+# check variable of item passed in - if invalid data, forcibly redirect back to ice-cream-list.php page
+if(isset($_GET['id']) && (int)$_GET['id'] > 0){#proper data must be on querystring
+	 $myID = (int)$_GET['id']; #Convert to integer, will equate to zero if fails
+}else{
+	myRedirect(VIRTUAL_PATH . "demo/ice-cream-list.php");
+}
 
-#Fills <title> tag. If left empty will default to $PageTitle in config_inc.php  
-$config->titleTag = 'Muffins made with love & PHP in Seattle';
+//sql statement to select individual item
+$sql = "select *from sm16_IceCream where IceCreamID = " . $myID;
+//---end config area --------------------------------------------------
 
-#Fills <meta> tags.  Currently we're adding to the existing meta tags in config_inc.php
-$config->metaDescription = 'Seattle Central\'s ITC280 Class Muffins are made with pure PHP! ' . $config->metaDescription;
-$config->metaKeywords = 'Muffins,PHP,Fun,Bran,Regular,Regular Expressions,'. $config->metaKeywords;
+$foundRecord = FALSE; # Will change to true, if record found!
+   
+# connection comes first in mysqli (improved) function
+$result = mysqli_query(IDB::conn(),$sql) or die(trigger_error(mysqli_error(IDB::conn()), E_USER_ERROR));
+
+if(mysqli_num_rows($result) > 0)
+{#records exist - process
+	   $foundRecord = TRUE;	
+	   while ($row = mysqli_fetch_assoc($result))
+	   {
+			$Flavor = dbOut($row['Flavor']);
+            $Brand = dbOut($row['Brand']);
+            $Description = dbOut($row['Description']);
+            $Calories = (float)$row['Calories'];
+           /*$MuffinName = dbOut($row['MuffinName']);
+			$Description = dbOut($row['Description']);
+			$Price = (float)$row['Price'];
+			$MetaDescription = dbOut($row['MetaDescription']);
+			$MetaKeywords = dbOut($row['MetaKeywords']);*/
+	   }
+}
+
+@mysqli_free_result($result); # We're done with the data!
+
 
 /*
 $config->metaDescription = 'Web Database ITC281 class website.'; #Fills <meta> tags.
@@ -37,43 +63,43 @@ $config->sidebar2 = ''; #goes inside right side of page
 $config->nav1["page.php"] = "New Page!"; #add a new page to end of nav1 (viewable this page only)!!
 $config->nav1 = array("page.php"=>"New Page!") + $config->nav1; #add a new page to beginning of nav1 (viewable this page only)!!
 */
-
 # END CONFIG AREA ---------------------------------------------------------- 
 
 get_header(); #defaults to theme header or header_inc.php
 ?>
 <h3 align="center"><?=smartTitle();?></h3>
 
-<p>This page, along with <b>demo_view_pager.php</b>, demonstrate a List/View web application.</p>
-<p>It was built on the mysql shared web application page, <b>demo_shared.php</b></p>
-<p>This page is the entry point of the application, meaning this page gets a link on your web site.  Since the current subject is muffins, we could name the link something clever like <a href="<?php echo VIRTUAL_PATH; ?>demo_list_pager.php">Muffins</a></p>
-<p>Use <b>demo_list_pager.php</b> and <b>demo_view_pager.php</b> as a starting point for building your own List/View web application!</p> 
+<p>This page, along with <b>ice-cream-list.php</b>, demonstrate a List/View web application.</p>
+<p>It was built on the mysqli shared web application page, <b>demo_shared.php</b></p>
+<p>This page is to be used only with <b>ice-cream-list.php</b>, and is <b>NOT</b> the entry point of the application, meaning this page gets <b>NO</b> link on your web site.</p>
+<p>Use <b>ice-cream-list.php</b> and <b>ice-cream-view.php</b> as a starting point for building your own List/View web application!</p> 
 <?php
-#reference images for pager
-$prev = '<img src="' . VIRTUAL_PATH . 'images/arrow_prev.gif" border="0" />';
-$next = '<img src="' . VIRTUAL_PATH . 'images/arrow_next.gif" border="0" />';
-
-# Create instance of new 'pager' class
-$myPager = new Pager(2,'',$prev,$next,'');
-$sql = $myPager->loadSQL($sql);  #load SQL, add offset
-
-# connection comes first in mysqli (improved) function
-$result = mysqli_query(IDB::conn(),$sql) or die(trigger_error(mysqli_error(IDB::conn()), E_USER_ERROR));
-
-if(mysqli_num_rows($result) > 0)
-{#records exist - process
-	if($myPager->showTotal()==1){$itemz = "muffin";}else{$itemz = "muffins";}  //deal with plural
-    echo '<div align="center">We have ' . $myPager->showTotal() . ' ' . $itemz . '!</div>';
-	while($row = mysqli_fetch_assoc($result))
-	{# process each row
-         echo '<div align="center"><a href="' . VIRTUAL_PATH . 'demo/demo_view_pager.php?id=' . (int)$row['MuffinID'] . '">' . dbOut($row['MuffinName']) . '</a>';
-         echo ' <i>only</i> <font color="red">$' . number_format((float)$row['Price'],2)  . '</font></div>';
-	}
-	echo $myPager->showNAV(); # show paging nav, only if enough records	 
-}else{#no records
-    echo "<div align=center>What! No muffins?  There must be a mistake!!</div>";	
+if($foundRecord)
+{#records exist - show muffin!
+?>
+	<h3 align="center"><?=$Flavor;?> Ice Cream!</h3>
+	<div align="center"><a href="<?=VIRTUAL_PATH;?>demo/ice-cream-list.php">More Ice Cream?!?</a></div>
+	<table align="center">
+		<tr>
+			<td><img src="<?=VIRTUAL_PATH;?>upload/m<?=$myID;?>.jpg" /></td>
+			<td>Made by <?=$Brand;?></td>
+		</tr>
+		<tr>
+			<td colspan="2">
+				<blockquote><?=$Description;?></blockquote>
+			</td>
+		</tr>
+		<tr>
+			<td align="center" colspan="2">
+				<h3><i>ONLY!!:</i> <font color="red">$<?=number_format($Calories);?></font></h3>
+			</td>
+		</tr>
+	</table>
+<?
+}else{//no such muffin!
+    echo '<div align="center">What! No such muffin? There must be a mistake!!</div>';
+    echo '<div align="center"><a href="' . VIRTUAL_PATH . 'demo/ice-cream-list.php">Another Muffin?</a></div>';
 }
-@mysqli_free_result($result);
 
 get_footer(); #defaults to theme footer or footer_inc.php
 ?>
